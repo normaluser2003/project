@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CertChain - Blockchain Certificate Authentication and Issuer Validation API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: issuers
+    description: Certificate issuer management and validation
+  - name: certificates
+    description: Certificate issuance and management
+  - name: verifications
+    description: Certificate verification operations
+  - name: dashboard
+    description: Dashboard statistics and analytics
 paths:
   /healthz:
     get:
@@ -24,6 +32,293 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /issuers:
+    get:
+      operationId: listIssuers
+      tags: [issuers]
+      summary: List all certificate issuers
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of issuers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Issuer"
+    post:
+      operationId: createIssuer
+      tags: [issuers]
+      summary: Register a new certificate issuer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssuerBody"
+      responses:
+        "201":
+          description: Created issuer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issuer"
+
+  /issuers/{id}:
+    get:
+      operationId: getIssuer
+      tags: [issuers]
+      summary: Get a single issuer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Issuer details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issuer"
+    patch:
+      operationId: updateIssuerStatus
+      tags: [issuers]
+      summary: Update issuer status (approve/reject)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIssuerStatusBody"
+      responses:
+        "200":
+          description: Updated issuer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issuer"
+
+  /issuers/{id}/vote:
+    post:
+      operationId: voteOnIssuer
+      tags: [issuers]
+      summary: Cast a vote to approve or reject an issuer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteOnIssuerBody"
+      responses:
+        "200":
+          description: Vote recorded and issuer updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issuer"
+
+  /certificates:
+    get:
+      operationId: listCertificates
+      tags: [certificates]
+      summary: List all certificates
+      parameters:
+        - name: issuerId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [valid, revoked, expired]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of certificates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Certificate"
+    post:
+      operationId: issueCertificate
+      tags: [certificates]
+      summary: Issue a new certificate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueCertificateBody"
+      responses:
+        "201":
+          description: Issued certificate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certificate"
+
+  /certificates/{id}:
+    get:
+      operationId: getCertificate
+      tags: [certificates]
+      summary: Get certificate by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Certificate details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certificate"
+    patch:
+      operationId: updateCertificateStatus
+      tags: [certificates]
+      summary: Revoke or update a certificate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCertificateStatusBody"
+      responses:
+        "200":
+          description: Updated certificate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certificate"
+
+  /certificates/verify:
+    post:
+      operationId: verifyCertificate
+      tags: [certificates]
+      summary: Verify a certificate using hash-based lookup (Bloom Filter optimized)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyCertificateBody"
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationResult"
+
+  /verifications:
+    get:
+      operationId: listVerifications
+      tags: [verifications]
+      summary: List recent verification attempts
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of verification records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Verification"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Recent activity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/verification-trend:
+    get:
+      operationId: getVerificationTrend
+      tags: [dashboard]
+      summary: Get verification counts by day for the last 7 days
+      responses:
+        "200":
+          description: Verification trend data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrendPoint"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +329,319 @@ components:
       required:
         - status
 
+    Issuer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [university, college, school, organization, government]
+        country:
+          type: string
+        address:
+          type: string
+        publicKeyHash:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        votesFor:
+          type: integer
+        votesAgainst:
+          type: integer
+        totalCertificates:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - type
+        - country
+        - address
+        - publicKeyHash
+        - status
+        - votesFor
+        - votesAgainst
+        - totalCertificates
+        - createdAt
+        - updatedAt
+
+    CreateIssuerBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [university, college, school, organization, government]
+        country:
+          type: string
+        address:
+          type: string
+      required:
+        - name
+        - type
+        - country
+        - address
+
+    UpdateIssuerStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+      required:
+        - status
+
+    VoteOnIssuerBody:
+      type: object
+      properties:
+        vote:
+          type: string
+          enum: [approve, reject]
+        validatorName:
+          type: string
+      required:
+        - vote
+        - validatorName
+
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: integer
+        certificateHash:
+          type: string
+        holderName:
+          type: string
+        holderEmail:
+          type: string
+        issuerId:
+          type: integer
+        issuerName:
+          type: string
+        degree:
+          type: string
+        field:
+          type: string
+        grade:
+          type: string
+        issuedDate:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          enum: [valid, revoked, expired]
+        transactionHash:
+          type: string
+        blockNumber:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - certificateHash
+        - holderName
+        - holderEmail
+        - issuerId
+        - issuerName
+        - degree
+        - field
+        - grade
+        - issuedDate
+        - status
+        - transactionHash
+        - blockNumber
+        - createdAt
+
+    IssueCertificateBody:
+      type: object
+      properties:
+        holderName:
+          type: string
+        holderEmail:
+          type: string
+        issuerId:
+          type: integer
+        degree:
+          type: string
+        field:
+          type: string
+        grade:
+          type: string
+        issuedDate:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+          nullable: true
+      required:
+        - holderName
+        - holderEmail
+        - issuerId
+        - degree
+        - field
+        - grade
+        - issuedDate
+
+    UpdateCertificateStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [revoked]
+      required:
+        - status
+
+    VerifyCertificateBody:
+      type: object
+      properties:
+        certificateHash:
+          type: string
+        verifierName:
+          type: string
+        verifierOrganization:
+          type: string
+      required:
+        - certificateHash
+        - verifierName
+        - verifierOrganization
+
+    VerificationResult:
+      type: object
+      properties:
+        found:
+          type: boolean
+        valid:
+          type: boolean
+        certificate:
+          $ref: "#/components/schemas/Certificate"
+          nullable: true
+        searchTimeMs:
+          type: number
+        bloomFilterHit:
+          type: boolean
+        message:
+          type: string
+      required:
+        - found
+        - valid
+        - searchTimeMs
+        - bloomFilterHit
+        - message
+
+    Verification:
+      type: object
+      properties:
+        id:
+          type: integer
+        certificateHash:
+          type: string
+        verifierName:
+          type: string
+        verifierOrganization:
+          type: string
+        result:
+          type: string
+          enum: [valid, revoked, not_found]
+        searchTimeMs:
+          type: number
+        bloomFilterHit:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - certificateHash
+        - verifierName
+        - verifierOrganization
+        - result
+        - searchTimeMs
+        - bloomFilterHit
+        - createdAt
+
+    DashboardStats:
+      type: object
+      properties:
+        totalCertificates:
+          type: integer
+        validCertificates:
+          type: integer
+        revokedCertificates:
+          type: integer
+        totalIssuers:
+          type: integer
+        approvedIssuers:
+          type: integer
+        pendingIssuers:
+          type: integer
+        totalVerifications:
+          type: integer
+        successfulVerifications:
+          type: integer
+        avgSearchTimeMs:
+          type: number
+        bloomFilterEfficiency:
+          type: number
+      required:
+        - totalCertificates
+        - validCertificates
+        - revokedCertificates
+        - totalIssuers
+        - approvedIssuers
+        - pendingIssuers
+        - totalVerifications
+        - successfulVerifications
+        - avgSearchTimeMs
+        - bloomFilterEfficiency
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [certificate_issued, certificate_revoked, issuer_approved, issuer_rejected, verification_success, verification_failed, issuer_registered, vote_cast]
+        description:
+          type: string
+        entityName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - description
+        - entityName
+        - createdAt
+
+    TrendPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        verifications:
+          type: integer
+        successful:
+          type: integer
+      required:
+        - date
+        - verifications
+        - successful

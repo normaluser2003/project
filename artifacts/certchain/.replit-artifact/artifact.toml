@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "CertChain - Blockchain Certificate Platform"
+version = "1.0.0"
+id = "artifacts/certchain"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18483
+
+[services.development]
+run = "pnpm --filter @workspace/certchain run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/certchain", "run", "build" ]
+publicDir = "artifacts/certchain/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18483"
+BASE_PATH = "/"
