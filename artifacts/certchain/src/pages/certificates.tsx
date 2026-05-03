@@ -8,7 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import { Plus, Search, ShieldOff, AlertCircle } from "lucide-react";
+import { Plus, Search, ShieldOff, AlertCircle, CheckCircle2, Copy, Check } from "lucide-react";
+
+type IssuedCertInfo = {
+  holderName: string;
+  degree: string;
+  field: string;
+  hash: string;
+};
 
 export default function Certificates() {
   const [search, setSearch] = useState("");
@@ -21,6 +28,9 @@ export default function Certificates() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [issuedCert, setIssuedCert] = useState<IssuedCertInfo | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const [formData, setFormData] = useState({
     holderName: "",
     holderEmail: "",
@@ -42,6 +52,12 @@ export default function Certificates() {
       issuedDate: new Date().toISOString().split("T")[0],
     });
     setErrorMsg("");
+  };
+
+  const handleCopy = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleIssue = (e: React.FormEvent) => {
@@ -66,8 +82,14 @@ export default function Certificates() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (data: any) => {
           setIsOpen(false);
+          setIssuedCert({
+            holderName: formData.holderName,
+            degree: formData.degree,
+            field: formData.field,
+            hash: data?.certificateHash ?? data?.certificate_hash ?? "",
+          });
           resetForm();
           queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
         },
@@ -91,6 +113,50 @@ export default function Certificates() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+
+      {/* Hash Success Dialog */}
+      <Dialog open={!!issuedCert} onOpenChange={(open) => { if (!open) { setIssuedCert(null); setCopied(false); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/15">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+              </div>
+              <DialogTitle className="text-lg">Certificate Issued Successfully</DialogTitle>
+            </div>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{issuedCert?.holderName}</span>'s{" "}
+              {issuedCert?.degree} in {issuedCert?.field} has been signed and recorded on the blockchain.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Blockchain Certificate Hash
+            </p>
+            <div className="relative bg-muted/60 border rounded-lg px-4 py-3">
+              <p className="font-mono text-sm break-all text-foreground pr-10 leading-relaxed">
+                {issuedCert?.hash}
+              </p>
+              <button
+                onClick={() => issuedCert?.hash && handleCopy(issuedCert.hash)}
+                className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+                title="Copy hash"
+              >
+                {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This hash uniquely identifies the certificate on the blockchain. Use it to verify authenticity at any time.
+            </p>
+          </div>
+
+          <Button className="w-full" onClick={() => { setIssuedCert(null); setCopied(false); }}>
+            Done
+          </Button>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Certificate Registry</h1>
@@ -271,7 +337,7 @@ export default function Certificates() {
                   </TableCell>
                   <TableCell>
                     <div
-                      className="font-mono text-xs text-muted-foreground w-32 truncate"
+                      className="font-mono text-xs text-muted-foreground w-32 truncate cursor-help"
                       title={cert.certificateHash}
                     >
                       {cert.certificateHash.substring(0, 16)}...
