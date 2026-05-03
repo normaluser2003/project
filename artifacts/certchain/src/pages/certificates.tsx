@@ -22,7 +22,10 @@ export default function Certificates() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { data: certificates, isLoading } = useListCertificates({ search: search || undefined });
+  const { data: certificates, isLoading } = useListCertificates({
+    issuerId: user?.id,
+    search: search || undefined,
+  });
   const issueMutation = useIssueCertificate();
   const updateStatusMutation = useUpdateCertificateStatus();
 
