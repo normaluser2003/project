@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { useListCertificates, useIssueCertificate, useUpdateCertificateStatus, useListIssuers, getListCertificatesQueryKey } from "@workspace/api-client-react";
+import { useListCertificates, useIssueCertificate, useUpdateCertificateStatus, getListCertificatesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import { Plus, Search, ShieldOff, AlertCircle, CheckCircle2, Copy, Check } from "lucide-react";
+import { Plus, Search, ShieldOff, AlertCircle, CheckCircle2, Copy, Check, Building2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 type IssuedCertInfo = {
   holderName: string;
@@ -20,9 +20,9 @@ type IssuedCertInfo = {
 export default function Certificates() {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: certificates, isLoading } = useListCertificates({ search: search || undefined });
-  const { data: allIssuers } = useListIssuers({ status: "approved" });
   const issueMutation = useIssueCertificate();
   const updateStatusMutation = useUpdateCertificateStatus();
 
@@ -34,7 +34,6 @@ export default function Certificates() {
   const [formData, setFormData] = useState({
     holderName: "",
     holderEmail: "",
-    issuerId: "",
     degree: "",
     field: "",
     grade: "",
@@ -45,7 +44,6 @@ export default function Certificates() {
     setFormData({
       holderName: "",
       holderEmail: "",
-      issuerId: "",
       degree: "",
       field: "",
       grade: "",
@@ -64,8 +62,8 @@ export default function Certificates() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!formData.issuerId) {
-      setErrorMsg("Please select an approved issuer.");
+    if (!user) {
+      setErrorMsg("You must be logged in to issue certificates.");
       return;
     }
 
@@ -74,7 +72,7 @@ export default function Certificates() {
         data: {
           holderName: formData.holderName,
           holderEmail: formData.holderEmail,
-          issuerId: parseInt(formData.issuerId),
+          issuerId: user.id,
           degree: formData.degree,
           field: formData.field,
           grade: formData.grade,
@@ -94,7 +92,7 @@ export default function Certificates() {
           queryClient.invalidateQueries({ queryKey: getListCertificatesQueryKey() });
         },
         onError: (err: any) => {
-          setErrorMsg(err?.message ?? "Failed to issue certificate. Make sure the issuer is approved.");
+          setErrorMsg(err?.message ?? "Failed to issue certificate.");
         },
       }
     );
@@ -199,24 +197,11 @@ export default function Certificates() {
                 </div>
                 <div className="space-y-2 col-span-2">
                   <label className="text-sm font-medium">Issuing Institution</label>
-                  <Select
-                    value={formData.issuerId}
-                    onValueChange={(val) => setFormData({ ...formData, issuerId: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an approved issuer..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allIssuers?.length === 0 && (
-                        <SelectItem value="_none" disabled>No approved issuers available</SelectItem>
-                      )}
-                      {allIssuers?.map((issuer) => (
-                        <SelectItem key={issuer.id} value={String(issuer.id)}>
-                          {issuer.name} ({issuer.type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/40 text-sm">
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium truncate">{user?.name}</span>
+                    <Badge variant="secondary" className="ml-auto shrink-0 text-xs capitalize">{user?.type}</Badge>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Degree</label>
