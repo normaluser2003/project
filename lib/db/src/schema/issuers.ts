@@ -23,6 +23,7 @@ export const issuersTable = pgTable("issuers", {
   country: text("country").notNull(),
   address: text("address").notNull(),
   publicKeyHash: text("public_key_hash").notNull(),
+  passwordHash: text("password_hash"),
   status: issuerStatusEnum("status").notNull().default("pending"),
   votesFor: integer("votes_for").notNull().default(0),
   votesAgainst: integer("votes_against").notNull().default(0),
