@@ -8,6 +8,9 @@ import {
 } from "@workspace/api-zod";
 import { eq, ilike, or } from "drizzle-orm";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+
+const DEFAULT_PASSWORD = "Abcd@123";
 
 const router: IRouter = Router();
 
@@ -39,11 +42,14 @@ router.post("/issuers", async (req, res) => {
     .update(`${body.name}:${body.address}:${Date.now()}`)
     .digest("hex");
 
+  const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
   const [issuer] = await db
     .insert(issuersTable)
     .values({
       ...body,
       publicKeyHash,
+      passwordHash,
       status: "pending",
       votesFor: 0,
       votesAgainst: 0,
